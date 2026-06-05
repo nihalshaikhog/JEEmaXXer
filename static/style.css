@@ -448,7 +448,13 @@ h1 span { color: var(--accent); }
 }
 
 /* CHAT */
-#chat { background: var(--bg); height: 100vh; overflow: hidden; }
+#chat { 
+  background: var(--bg); 
+  height: 100vh; 
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
 .chat-header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -478,7 +484,7 @@ h1 span { color: var(--accent); }
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  height: calc(100vh - 180px);
+  min-height: 0;
 }
 .msg {
   display: flex;
