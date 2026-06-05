@@ -263,17 +263,8 @@ def chat():
         exam_target = data.get("examTarget", "JEE")
         days_left = data.get("daysLeft", "")
         conversation_history = data.get("history", [])
-
-        # Progress data fetch karo
-        conn = get_db()
-        c = conn.cursor()
-        c.execute('SELECT topic_key FROM progress WHERE user_id = ? AND completed = 1',
-                  (session['user_id'],))
-        completed_topics = [row['topic_key'] for row in c.fetchall()]
-        conn.close()
-
-        completed_count = len(completed_topics)
-        total_topics = 112
+        completed_count = data.get("completedCount", 0)
+        total_topics = data.get("totalTopics", 112)
 
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
@@ -283,12 +274,11 @@ Exam target: {exam_target}
 Days left for exam: {days_left}
 Topics completed: {completed_count} out of {total_topics}
 Completion percentage: {round((completed_count/total_topics)*100) if total_topics > 0 else 0}%
-Completed topics: {', '.join(completed_topics[:20]) if completed_topics else 'None yet — just starting out'}
 
 Use this data naturally in conversation when relevant.
-If they ask for a study plan, suggest topics they haven't covered yet.
-If they seem demotivated, remind them of their actual progress.
-Don't force progress mentions in every message — only when it makes sense.
+If they ask for a study plan, suggest what to study next based on completion.
+If they seem demotivated, remind them of their actual progress numbers.
+Don't force progress mentions every message — only when it genuinely makes sense.
 """
         messages.append({"role": "system", "content": context})
 
