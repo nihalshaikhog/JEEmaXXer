@@ -274,13 +274,28 @@ async function checkLoginStatus() {
     const user = await res.json();
     if (user.logged_in) {
       userName = user.name;
-      examTarget = user.exam_target;
-      daysLeft = user.days_left;
+      
+      // localStorage se data lo
+      const saved = JSON.parse(localStorage.getItem('jeemaxxer_setup') || '{}');
+      examTarget = saved.examTarget || user.exam_target || '';
+      daysLeft = saved.daysLeft || user.days_left || '';
+
+      // Progress localStorage se
+      completedTopics = JSON.parse(localStorage.getItem('completedTopics') || '{}');
+
+      // Ban localStorage se
+      const ban = JSON.parse(localStorage.getItem('banStatus') || '{}');
+      if (ban.isBanned && ban.banEndTime > Date.now()) {
+        isBanned = true;
+        banEndTime = ban.banEndTime;
+        warningCount = ban.warningCount || 2;
+      } else {
+        warningCount = ban.warningCount || 0;
+      }
+
       if (!examTarget || !daysLeft) {
         showScreen('onboarding');
       } else {
-        await loadProgressFromDB();
-        await loadBanFromDB();
         setupDashboard();
         showScreen('dashboard');
       }
@@ -321,17 +336,11 @@ async function loadBanFromDB() {
 }
 
 async function saveBanToDB() {
-  try {
-    await fetch('/api/ban', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        warning_count: warningCount,
-        is_banned: isBanned,
-        ban_end_time: banEndTime || 0
-      })
-    });
-  } catch (e) {}
+  localStorage.setItem('banStatus', JSON.stringify({
+    isBanned,
+    banEndTime,
+    warningCount
+  }));
 }
 
 function setupDashboard() {
@@ -358,6 +367,9 @@ async function saveSetup() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ examTarget, daysLeft, struggle })
     });
+    localStorage.setItem('jeemaxxer_setup', JSON.stringify({
+      examTarget, daysLeft, struggle
+    }));
     setupDashboard();
     showScreen('dashboard');
   } catch (e) {
