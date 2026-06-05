@@ -263,7 +263,6 @@ const syllabus = {
   ]
 };
 
-// Initialize app
 window.onload = async function() {
   await checkLoginStatus();
 };
@@ -274,16 +273,15 @@ async function checkLoginStatus() {
     const user = await res.json();
     if (user.logged_in) {
       userName = user.name;
-      
-      // localStorage se data lo
+
       const saved = JSON.parse(localStorage.getItem('jeemaxxer_setup') || '{}');
       examTarget = saved.examTarget || user.exam_target || '';
       daysLeft = saved.daysLeft || user.days_left || '';
 
-      // Progress localStorage se
       completedTopics = JSON.parse(localStorage.getItem('completedTopics') || '{}');
 
-      // Ban localStorage se
+      conversationHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+
       const ban = JSON.parse(localStorage.getItem('banStatus') || '{}');
       if (ban.isBanned && ban.banEndTime > Date.now()) {
         isBanned = true;
@@ -307,46 +305,11 @@ async function checkLoginStatus() {
   }
 }
 
-async function loadProgressFromDB() {
-  try {
-    const res = await fetch('/api/progress');
-    completedTopics = await res.json();
-  } catch (e) {
-    completedTopics = {};
-  }
-}
-
-async function loadBanFromDB() {
-  try {
-    const res = await fetch('/api/ban');
-    const ban = await res.json();
-    const now = Date.now();
-    if (ban.is_banned && ban.ban_end_time > now) {
-      isBanned = true;
-      banEndTime = ban.ban_end_time;
-      warningCount = ban.warning_count;
-    } else {
-      isBanned = false;
-      banEndTime = null;
-      warningCount = ban.warning_count || 0;
-    }
-  } catch (e) {
-    warningCount = 0;
-  }
-}
-
-async function saveBanToDB() {
-  localStorage.setItem('banStatus', JSON.stringify({
-    isBanned,
-    banEndTime,
-    warningCount
-  }));
-}
-
 function setupDashboard() {
   document.getElementById('dashWelcome').textContent = `Hey ${userName.split(' ')[0]}! 👋`;
   document.getElementById('dashExam').textContent = `${examTarget} • ${daysLeft} days left`;
   document.getElementById('dashDays').textContent = daysLeft;
+  document.getElementById('dashStreak').textContent = `🔥 Day 1`;
   updateProgress();
 }
 
@@ -361,24 +324,24 @@ async function saveSetup() {
     alert('Please fill all fields bhai! 🙏');
     return;
   }
+  localStorage.setItem('jeemaxxer_setup', JSON.stringify({ examTarget, daysLeft, struggle }));
   try {
     await fetch('/api/setup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ examTarget, daysLeft, struggle })
     });
-    localStorage.setItem('jeemaxxer_setup', JSON.stringify({
-      examTarget, daysLeft, struggle
-    }));
-    setupDashboard();
-    showScreen('dashboard');
-  } catch (e) {
-    alert('Something went wrong! Try again.');
-  }
+  } catch (e) {}
+  setupDashboard();
+  showScreen('dashboard');
 }
 
 async function logout() {
   await fetch('/api/logout', { method: 'POST' });
+  localStorage.removeItem('jeemaxxer_setup');
+  localStorage.removeItem('completedTopics');
+  localStorage.removeItem('chatHistory');
+  localStorage.removeItem('banStatus');
   userName = '';
   examTarget = '';
   daysLeft = '';
@@ -392,6 +355,17 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
   if (id === 'syllabus') renderSyllabus(currentTab);
   if (id === 'dashboard') updateProgress();
+  if (id === 'chat') restoreChatHistory();
+}
+
+function restoreChatHistory() {
+  const msgs = document.getElementById('messages');
+  if (msgs.children.length === 0 && conversationHistory.length > 0) {
+    conversationHistory.forEach(msg => {
+      if (msg.role === 'user') addUserMsg(msg.content);
+      else addBotMsg(msg.content);
+    });
+  }
 }
 
 function toggleOther(select) {
@@ -474,22 +448,13 @@ function toggleChapter(header) {
   arrow.classList.toggle('open');
 }
 
-async function toggleTopic(subject, ci, ti, topicName, checkbox) {
+function toggleTopic(subject, ci, ti, topicName, checkbox) {
   const key = `${subject}_${ci}_${topicName}`;
   completedTopics[key] = checkbox.checked;
+  localStorage.setItem('completedTopics', JSON.stringify(completedTopics));
   const topicItem = document.getElementById(`topic_${subject}_${ci}_${ti}`);
-  if (checkbox.checked) {
-    topicItem.classList.add('topic-done');
-  } else {
-    topicItem.classList.remove('topic-done');
-  }
-  try {
-    await fetch('/api/progress', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ topic_key: key, completed: checkbox.checked })
-    });
-  } catch (e) {}
+  if (checkbox.checked) topicItem.classList.add('topic-done');
+  else topicItem.classList.remove('topic-done');
   updateProgress();
 }
 
@@ -505,7 +470,7 @@ function checkBanStatus() {
       isBanned = false;
       banEndTime = null;
       warningCount = 0;
-      saveBanToDB();
+      saveBanStatus();
       const input = document.getElementById('chatInput');
       if (input) {
         input.disabled = false;
@@ -520,6 +485,12 @@ function checkBanStatus() {
     return true;
   }
   return false;
+}
+
+function saveBanStatus() {
+  localStorage.setItem('banStatus', JSON.stringify({
+    isBanned, banEndTime, warningCount
+  }));
 }
 
 function addBotMsg(text) {
@@ -593,7 +564,7 @@ async function sendMessage() {
   if (containsGaali(text)) {
     warningCount++;
     input.value = '';
-    await saveBanToDB();
+    saveBanStatus();
     if (warningCount === 1) {
       addBotMsg("⚠️ Bhai ye JEE prep ka platform hai — thodi respect rakh. Ek warning ho gayi, ek aur aayi toh 10 min ke liye chat band 🙏");
       return;
@@ -602,7 +573,7 @@ async function sendMessage() {
       addBotMsg("🚫 Done bhai — 10 minute ke liye chat band. Thanda ho ja, phir milte hain 😤");
       isBanned = true;
       banEndTime = Date.now() + (10 * 60 * 1000);
-      await saveBanToDB();
+      saveBanStatus();
       input.disabled = true;
       input.placeholder = '🚫 10 min ban — chill kar bhai';
       const countdown = setInterval(() => {
@@ -619,6 +590,7 @@ async function sendMessage() {
   input.disabled = true;
   addUserMsg(text);
   conversationHistory.push({ role: 'user', content: text });
+  localStorage.setItem('chatHistory', JSON.stringify(conversationHistory));
   showTyping();
   const reply = await getBotReply(text);
   removeTyping();
@@ -626,6 +598,7 @@ async function sendMessage() {
   input.disabled = false;
   input.focus();
   conversationHistory.push({ role: 'assistant', content: reply });
+  localStorage.setItem('chatHistory', JSON.stringify(conversationHistory));
 }
 
 async function sendQuick(text) {
@@ -633,9 +606,11 @@ async function sendQuick(text) {
   if (containsGaali(text)) return;
   addUserMsg(text);
   conversationHistory.push({ role: 'user', content: text });
+  localStorage.setItem('chatHistory', JSON.stringify(conversationHistory));
   showTyping();
   const reply = await getBotReply(text);
   removeTyping();
   addBotMsg(reply);
   conversationHistory.push({ role: 'assistant', content: reply });
+  localStorage.setItem('chatHistory', JSON.stringify(conversationHistory));
 }
