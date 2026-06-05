@@ -5,12 +5,11 @@ from dotenv import load_dotenv
 from flask_dance.contrib.google import make_google_blueprint, google
 import sqlite3
 import os
-import json
 
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+app.secret_key = os.environ.get("SECRET_KEY", "jeemaxxer_secret_2026")
 CORS(app)
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -21,7 +20,8 @@ google_bp = make_google_blueprint(
     client_id=os.getenv("GOOGLE_CLIENT_ID"),
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
     redirect_to="google_auth_callback",
-    scope=["openid", "https://www.googleapis.com/auth/userinfo.email",
+    scope=["openid",
+           "https://www.googleapis.com/auth/userinfo.email",
            "https://www.googleapis.com/auth/userinfo.profile"]
 )
 app.register_blueprint(google_bp, url_prefix="/auth")
@@ -60,24 +60,10 @@ def init_db():
 
 init_db()
 
-def get_user_by_google_id(google_id):
+def get_db():
     conn = sqlite3.connect('jeemaxxer.db')
-    c = conn.cursor()
-    c.execute('SELECT * FROM users WHERE google_id = ?', (google_id,))
-    user = c.fetchone()
-    conn.close()
-    return user
-
-def create_or_update_user(google_id, name, email):
-    conn = sqlite3.connect('jeemaxxer.db')
-    c = conn.cursor()
-    c.execute('''INSERT OR IGNORE INTO users (google_id, name, email)
-                 VALUES (?, ?, ?)''', (google_id, name, email))
-    conn.commit()
-    c.execute('SELECT * FROM users WHERE google_id = ?', (google_id,))
-    user = c.fetchone()
-    conn.close()
-    return user
+    conn.row_factory = sqlite3.Row
+    return conn
 
 SYSTEM_PROMPT = """
 You are JEEmaXXer — a study companion for JEE aspirants in India.
@@ -127,54 +113,66 @@ IMPORTANT RULES:
 
 @app.route("/")
 def home():
-    if 'user_id' in session:
-        return render_template("index.html")
     return render_template("index.html")
 
 @app.route("/auth/google/callback")
 def google_auth_callback():
     if not google.authorized:
         return redirect(url_for("google.login"))
-    resp = google.get("/oauth2/v2/userinfo")
-    if not resp.ok:
+    try:
+        resp = google.get("/oauth2/v2/userinfo")
+        if not resp.ok:
+            return redirect("/")
+        user_info = resp.json()
+        google_id = user_info["id"]
+        name = user_info["name"]
+        email = user_info["email"]
+        conn = get_db()
+        c = conn.cursor()
+        c.execute('''INSERT OR IGNORE INTO users (google_id, name, email)
+                     VALUES (?, ?, ?)''', (google_id, name, email))
+        conn.commit()
+        c.execute('SELECT * FROM users WHERE google_id = ?', (google_id,))
+        user = c.fetchone()
+        conn.close()
+        session['user_id'] = user['id']
+        session['user_name'] = name
+        session['user_email'] = email
         return redirect("/")
-    user_info = resp.json()
-    google_id = user_info["id"]
-    name = user_info["name"]
-    email = user_info["email"]
-    user = create_or_update_user(google_id, name, email)
-    session['user_id'] = user[0]
-    session['user_name'] = name
-    session['user_email'] = email
-    return redirect("/")
+    except Exception as e:
+        print(f"OAuth error: {e}")
+        return redirect("/")
 
 @app.route("/api/user", methods=["GET"])
 def get_user():
     if 'user_id' not in session:
         return jsonify({"logged_in": False})
-    conn = sqlite3.connect('jeemaxxer.db')
-    c = conn.cursor()
-    c.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],))
-    user = c.fetchone()
-    conn.close()
-    if not user:
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],))
+        user = c.fetchone()
+        conn.close()
+        if not user:
+            return jsonify({"logged_in": False})
+        return jsonify({
+            "logged_in": True,
+            "id": user['id'],
+            "name": user['name'],
+            "email": user['email'],
+            "exam_target": user['exam_target'],
+            "days_left": user['days_left'],
+            "struggle": user['struggle']
+        })
+    except Exception as e:
         return jsonify({"logged_in": False})
-    return jsonify({
-        "logged_in": True,
-        "id": user[0],
-        "name": user[2],
-        "email": user[3],
-        "exam_target": user[4],
-        "days_left": user[5],
-        "struggle": user[6]
-    })
 
 @app.route("/api/setup", methods=["POST"])
 def setup_user():
     if 'user_id' not in session:
         return jsonify({"error": "Not logged in"}), 401
     data = request.json
-    conn = sqlite3.connect('jeemaxxer.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute('''UPDATE users SET exam_target=?, days_left=?, struggle=?
                  WHERE id=?''',
@@ -187,30 +185,28 @@ def setup_user():
 @app.route("/api/progress", methods=["GET"])
 def get_progress():
     if 'user_id' not in session:
-        return jsonify({"error": "Not logged in"}), 401
-    conn = sqlite3.connect('jeemaxxer.db')
+        return jsonify({})
+    conn = get_db()
     c = conn.cursor()
     c.execute('SELECT topic_key, completed FROM progress WHERE user_id = ?',
               (session['user_id'],))
     rows = c.fetchall()
     conn.close()
-    progress = {row[0]: row[1] for row in rows}
-    return jsonify(progress)
+    return jsonify({row['topic_key']: bool(row['completed']) for row in rows})
 
 @app.route("/api/progress", methods=["POST"])
 def save_progress():
     if 'user_id' not in session:
         return jsonify({"error": "Not logged in"}), 401
     data = request.json
-    topic_key = data.get('topic_key')
-    completed = data.get('completed')
-    conn = sqlite3.connect('jeemaxxer.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute('''INSERT INTO progress (user_id, topic_key, completed)
                  VALUES (?, ?, ?)
                  ON CONFLICT(user_id, topic_key)
                  DO UPDATE SET completed=?''',
-              (session['user_id'], topic_key, completed, completed))
+              (session['user_id'], data['topic_key'],
+               data['completed'], data['completed']))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
@@ -219,7 +215,7 @@ def save_progress():
 def get_ban():
     if 'user_id' not in session:
         return jsonify({"warning_count": 0, "is_banned": False, "ban_end_time": 0})
-    conn = sqlite3.connect('jeemaxxer.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute('SELECT * FROM ban_status WHERE user_id = ?', (session['user_id'],))
     ban = c.fetchone()
@@ -227,9 +223,9 @@ def get_ban():
     if not ban:
         return jsonify({"warning_count": 0, "is_banned": False, "ban_end_time": 0})
     return jsonify({
-        "warning_count": ban[2],
-        "is_banned": ban[3],
-        "ban_end_time": ban[4]
+        "warning_count": ban['warning_count'],
+        "is_banned": bool(ban['is_banned']),
+        "ban_end_time": ban['ban_end_time']
     })
 
 @app.route("/api/ban", methods=["POST"])
@@ -237,15 +233,15 @@ def save_ban():
     if 'user_id' not in session:
         return jsonify({"error": "Not logged in"}), 401
     data = request.json
-    conn = sqlite3.connect('jeemaxxer.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute('''INSERT INTO ban_status (user_id, warning_count, is_banned, ban_end_time)
                  VALUES (?, ?, ?, ?)
                  ON CONFLICT(user_id)
                  DO UPDATE SET warning_count=?, is_banned=?, ban_end_time=?''',
-              (session['user_id'], data['warning_count'], data['is_banned'],
-               data['ban_end_time'], data['warning_count'], data['is_banned'],
-               data['ban_end_time']))
+              (session['user_id'], data['warning_count'],
+               data['is_banned'], data['ban_end_time'],
+               data['warning_count'], data['is_banned'], data['ban_end_time']))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
@@ -266,14 +262,17 @@ def chat():
         exam_target = data.get("examTarget", "JEE")
         days_left = data.get("daysLeft", "")
         conversation_history = data.get("history", [])
+
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
         context = f"Student's name: {user_name}. Exam target: {exam_target}."
         if days_left:
             context += f" Days left for exam: {days_left}."
         messages.append({"role": "system", "content": context})
+
         for msg in conversation_history[-10:]:
             messages.append({"role": msg["role"], "content": msg["content"]})
         messages.append({"role": "user", "content": user_message})
+
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=messages,
