@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>JEEmaXXer</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- LANDING SCREEN -->
+  <div id="landing" class="screen active">
+    <div class="bg-orb orb1"></div>
+    <div class="bg-orb orb2"></div>
+    <div class="landing-content">
+      <div class="badge"><div class="dot"></div> AI Study Companion</div>
+      <h1>Crack JEE with<br><span>JEEmaXXer</span></h1>
+      <p class="subtitle">Your AI-powered study companion that keeps you consistent, focused, and motivated — even when you've missed days.</p>
+      <button class="cta-btn" onclick="showScreen('login')">Get Started — It's Free →</button>
+      <div class="stats">
+        <div class="stat"><div class="stat-num">10K+</div><div class="stat-label">Students</div></div>
+        <div class="stat"><div class="stat-num">98%</div><div class="stat-label">Stay Consistent</div></div>
+        <div class="stat"><div class="stat-num">PCM</div><div class="stat-label">Full Coverage</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGIN SCREEN -->
+  <div id="login" class="screen">
+    <div class="login-card">
+      <div class="login-logo">JX</div>
+      <h2>Welcome to JEEmaXXer</h2>
+      <p class="login-sub">Sign in to save your progress and continue your JEE journey 🔥</p>
+      <a href="/auth/google/login" class="google-btn">
+        <svg width="20" height="20" viewBox="0 0 48 48">
+          <path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/>
+          <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.1 18.9 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+          <path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.9 13.5-5l-6.2-5.2C29.4 35.6 26.8 36 24 36c-5.2 0-9.6-3-11.4-7.4l-6.5 5C9.5 39.6 16.3 44 24 44z"/>
+          <path fill="#1976D2" d="M43.6 20H24v8h11.3c-.9 2.5-2.6 4.6-4.8 6l6.2 5.2C40.7 35.5 44 30.2 44 24c0-1.3-.1-2.7-.4-4z"/>
+        </svg>
+        Continue with Google
+      </a>
+      <p class="login-note">🔒 We only access your name and email — nothing else</p>
+    </div>
+  </div>
+
+  <!-- ONBOARDING SCREEN -->
+  <div id="onboarding" class="screen">
+    <div class="onboard-card">
+      <h2>Almost there! 🚀</h2>
+      <p class="onboard-sub">Tell us about yourself so JEEmaXXer can personalize your experience.</p>
+      <div class="form-group">
+        <label>Exam Target</label>
+        <select id="examType">
+          <option value="">Select exam...</option>
+          <option>JEE Mains 2026</option>
+          <option>JEE Advanced 2026</option>
+          <option>JEE Mains 2027</option>
+          <option>JEE Advanced 2027</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Days Left for Exam</label>
+        <input type="number" id="daysLeft" placeholder="e.g. 180" min="1" max="730" />
+      </div>
+      <div class="form-group">
+        <label>Biggest Struggle</label>
+        <select id="struggle" onchange="toggleOther(this)">
+          <option value="">What's your main issue?</option>
+          <option>Can't stay consistent</option>
+          <option>Get distracted / doomscroll</option>
+          <option>Lose focus quickly</option>
+          <option>Panic after missing days</option>
+          <option>Can't understand concepts</option>
+          <option value="other">Other (tell us yourself)</option>
+        </select>
+      </div>
+      <div class="form-group" id="otherGroup" style="display:none;">
+        <label>Tell us your struggle</label>
+        <input type="text" id="otherStruggle" placeholder="e.g. I can't study at night..." />
+      </div>
+      <button class="submit-btn" onclick="saveSetup()">Let's Go! 🔥</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD SCREEN -->
+  <div id="dashboard" class="screen">
+    <div class="dash-header">
+      <div class="dash-logo">JX</div>
+      <div class="dash-title">JEEmaXXer</div>
+      <div class="streak-badge" id="dashStreak">🔥 Day 1</div>
+    </div>
+    <div class="dash-body">
+      <div class="welcome-card">
+        <div class="welcome-text">
+          <h2 id="dashWelcome">Hey! 👋</h2>
+          <p id="dashExam">Loading...</p>
+        </div>
+        <div class="days-circle" id="dashDays">--</div>
+      </div>
+      <div class="dash-grid">
+        <div class="dash-card" onclick="showScreen('chat')">
+          <div class="dash-card-icon">💬</div>
+          <div class="dash-card-title">Chat</div>
+          <div class="dash-card-sub">Talk to JEEmaXXer</div>
+        </div>
+        <div class="dash-card" onclick="showScreen('syllabus')">
+          <div class="dash-card-icon">📚</div>
+          <div class="dash-card-title">Syllabus</div>
+          <div class="dash-card-sub">Track your progress</div>
+        </div>
+        <div class="dash-card coming-soon">
+          <div class="dash-card-icon">⏱️</div>
+          <div class="dash-card-title">Focus Mode</div>
+          <div class="dash-card-sub">Coming soon...</div>
+        </div>
+        <div class="dash-card coming-soon">
+          <div class="dash-card-icon">📊</div>
+          <div class="dash-card-title">Analytics</div>
+          <div class="dash-card-sub">Coming soon...</div>
+        </div>
+      </div>
+      <div class="progress-section">
+        <div class="progress-title">Overall Progress</div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="overallProgress" style="width:0%"></div>
+        </div>
+        <div class="progress-label" id="progressLabel">0 topics completed</div>
+      </div>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- SYLLABUS SCREEN -->
+  <div id="syllabus" class="screen">
+    <div class="chat-header">
+      <button class="back-btn" onclick="showScreen('dashboard')">← Back</button>
+      <div class="chat-info">
+        <h3>Syllabus Tracker</h3>
+        <p class="online" id="syllabusProgress">0% Complete</p>
+      </div>
+    </div>
+    <div class="syllabus-body">
+      <div class="subject-tabs">
+        <button class="tab active" onclick="switchTab('physics', event)">⚛️ Physics</button>
+        <button class="tab" onclick="switchTab('chemistry', event)">🧪 Chemistry</button>
+        <button class="tab" onclick="switchTab('maths', event)">📐 Maths</button>
+      </div>
+      <div id="syllabusContent"></div>
+    </div>
+  </div>
+
+  <!-- CHAT SCREEN -->
+  <div id="chat" class="screen">
+    <div class="chat-header">
+      <button class="back-btn" onclick="showScreen('dashboard')">← Back</button>
+      <div class="chat-info">
+        <h3>JEEmaXXer</h3>
+        <p class="online">● Online — ready to help</p>
+      </div>
+      <div class="streak-badge" id="streakBadge">🔥 Day 1</div>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="quick-replies">
+      <button class="qr" onclick="sendQuick('📚 What should I study today?')">📚 Today's plan</button>
+      <button class="qr" onclick="sendQuick('😔 I missed 3 days, help me get back')">😔 I missed days</button>
+      <button class="qr" onclick="sendQuick('🧠 Explain Newton Laws simply')">🧠 Explain concept</button>
+      <button class="qr" onclick="sendQuick('📵 Help me with dopamine detox')">📵 Dopamine detox</button>
+    </div>
+    <div class="chat-input-area">
+      <input class="chat-input" id="chatInput" placeholder="Ask JEEmaXXer anything..." onkeydown="if(event.key==='Enter') sendMessage()" />
+      <button class="send-btn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24" fill="white" width="18" height="18">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
