@@ -256,6 +256,7 @@ def chat():
     try:
         if 'user_id' not in session:
             return jsonify({"error": "Not logged in"}), 401
+
         data = request.json
         user_message = data.get("message", "")
         user_name = data.get("userName", "bhai")
@@ -263,10 +264,32 @@ def chat():
         days_left = data.get("daysLeft", "")
         conversation_history = data.get("history", [])
 
+        # Progress data fetch karo
+        conn = get_db()
+        c = conn.cursor()
+        c.execute('SELECT topic_key FROM progress WHERE user_id = ? AND completed = 1',
+                  (session['user_id'],))
+        completed_topics = [row['topic_key'] for row in c.fetchall()]
+        conn.close()
+
+        completed_count = len(completed_topics)
+        total_topics = 112
+
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        context = f"Student's name: {user_name}. Exam target: {exam_target}."
-        if days_left:
-            context += f" Days left for exam: {days_left}."
+
+        context = f"""
+Student's name: {user_name}
+Exam target: {exam_target}
+Days left for exam: {days_left}
+Topics completed: {completed_count} out of {total_topics}
+Completion percentage: {round((completed_count/total_topics)*100) if total_topics > 0 else 0}%
+Completed topics: {', '.join(completed_topics[:20]) if completed_topics else 'None yet — just starting out'}
+
+Use this data naturally in conversation when relevant.
+If they ask for a study plan, suggest topics they haven't covered yet.
+If they seem demotivated, remind them of their actual progress.
+Don't force progress mentions in every message — only when it makes sense.
+"""
         messages.append({"role": "system", "content": context})
 
         for msg in conversation_history[-10:]:
@@ -281,6 +304,7 @@ def chat():
         )
         reply = response.choices[0].message.content
         return jsonify({"reply": reply, "status": "success"})
+
     except Exception as e:
         print(f"ERROR: {e}")
         return jsonify({
