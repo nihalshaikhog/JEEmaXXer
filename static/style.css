@@ -31,6 +31,9 @@ body {
 .screen.active {
   display: flex;
 }
+.screen.active {
+  display: flex;
+}
 
 /* LANDING */
 #landing {
