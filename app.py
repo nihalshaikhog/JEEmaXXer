@@ -37,6 +37,7 @@ def init_db():
         exam_target TEXT,
         days_left INTEGER,
         struggle TEXT,
+        board_type TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS progress (
@@ -174,10 +175,10 @@ def setup_user():
     data = request.json
     conn = get_db()
     c = conn.cursor()
-    c.execute('''UPDATE users SET exam_target=?, days_left=?, struggle=?
-                 WHERE id=?''',
-              (data.get('examTarget'), data.get('daysLeft'),
-               data.get('struggle'), session['user_id']))
+    c.execute('''UPDATE users SET exam_target=?, days_left=?, struggle=?, board_type=?
+             WHERE id=?''',
+          (data.get('examTarget'), data.get('daysLeft'),
+           data.get('struggle'), data.get('boardType'), session['user_id']))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
