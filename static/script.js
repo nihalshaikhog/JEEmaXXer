@@ -316,6 +316,7 @@ function setupDashboard() {
 async function saveSetup() {
   examTarget = document.getElementById('examType').value;
   daysLeft = document.getElementById('daysLeft').value;
+  const boardType = document.getElementById('boardType')?.value || '';
   let struggle = document.getElementById('struggle').value;
   if (struggle === 'other') {
     struggle = document.getElementById('otherStruggle').value || 'general struggles';
@@ -324,12 +325,12 @@ async function saveSetup() {
     alert('Please fill all fields bhai! 🙏');
     return;
   }
-  localStorage.setItem('jeemaxxer_setup', JSON.stringify({ examTarget, daysLeft, struggle }));
+  localStorage.setItem('jeemaxxer_setup', JSON.stringify({ examTarget, daysLeft, struggle, boardType }));
   try {
     await fetch('/api/setup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ examTarget, daysLeft, struggle })
+      body: JSON.stringify({ examTarget, daysLeft, struggle, boardType })
     });
   } catch (e) {}
   setupDashboard();
@@ -371,6 +372,16 @@ function restoreChatHistory() {
 function toggleOther(select) {
   const otherGroup = document.getElementById('otherGroup');
   otherGroup.style.display = select.value === 'other' ? 'block' : 'none';
+}
+
+function toggleBoard() {
+  const val = document.getElementById('examType').value;
+  const boardGroup = document.getElementById('boardGroup');
+  if (val.includes('12th') || val.includes('Boards')) {
+    boardGroup.style.display = 'block';
+  } else {
+    boardGroup.style.display = 'none';
+  }
 }
 
 function getTotalTopics() {

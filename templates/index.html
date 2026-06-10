@@ -51,18 +51,33 @@
       <h2>Almost there! 🚀</h2>
       <p class="onboard-sub">Tell us about yourself so JEEmaXXer can personalize your experience.</p>
       <div class="form-group">
-        <label>Exam Target</label>
-        <select id="examType">
-          <option value="">Select exam...</option>
+       <label>Exam Target</label>
+        <select id="examType" onchange="toggleBoard()">
+          <option value="">Select your goal...</option>
           <option>JEE Mains 2027</option>
           <option>JEE Advanced 2027</option>
+          <option>JEE Mains + 12th Boards 2027</option>
           <option>JEE Mains 2028</option>
           <option>JEE Advanced 2028</option>
+          <option>JEE Mains + 12th Boards 2028</option>
+          <option>Only 12th Boards 2027</option>
         </select>
       </div>
       <div class="form-group">
         <label>Days Left for Exam</label>
         <input type="number" id="daysLeft" placeholder="e.g. 180" min="1" max="730" />
+      </div>
+      <div class="form-group" id="boardGroup" style="display:none;">
+        <label>Your Board</label>
+          <select id="boardType">
+          <option value="">Select board...</option>
+          <option>CBSE</option>
+          <option>Maharashtra HSC</option>
+          <option>UP Board</option>
+          <option>Rajasthan Board</option>
+          <option>Bihar Board</option>
+          <option>Other State Board</option>
+        </select>
       </div>
       <div class="form-group">
         <label>Biggest Struggle</label>
