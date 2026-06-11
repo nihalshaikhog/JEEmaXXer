@@ -795,8 +795,8 @@ function switchTab(tab, event) {
 function getSyllabusMode() {
   const saved = JSON.parse(localStorage.getItem('jeemaxxer_setup') || '{}');
   const exam = saved.examTarget || '';
-  if (exam.includes('12th') || exam.includes('Boards')) return 'both';
   if (exam.includes('Only 12th')) return 'boards';
+  if (exam.includes('12th') || exam.includes('Boards')) return 'both';
   return 'jee';
 }
 
