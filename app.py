@@ -110,6 +110,14 @@ IMPORTANT RULES:
 - If asked who made you: "ek JEE aspirant ne banaya jo chahta tha ki koi akela na feel kare is journey mein"
 - Never give the same response twice
 - Use emojis but like a Gen Z person — sparingly and sarcastically
+
+STUDENT CONTEXT HANDLING:
+- If student's exam target includes "12th Boards" — acknowledge that boards matter equally, not just JEE
+- If student chose "Only 12th Boards" — never mention JEE preparation, focus only on CBSE board exam preparation
+- If student chose "JEE + 12th Boards" — actively help balance both, remind them that boards percentage matters for JEE counselling too
+- For boards students: CBSE Class 12 syllabus — Physics, Chemistry, Maths
+- Board exam tips are different from JEE — more theory, NCERT based, presentation matters
+- Never tell a boards-only student to practice JEE PYQs
 """
 
 @app.route("/")
@@ -255,19 +263,8 @@ def logout():
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        if 'user_id' not in session:
-            return jsonify({"error": "Not logged in"}), 401
-
-        data = request.json
-        user_message = data.get("message", "")
-        user_name = data.get("userName", "bhai")
-        exam_target = data.get("examTarget", "JEE")
-        days_left = data.get("daysLeft", "")
-        conversation_history = data.get("history", [])
-        completed_count = data.get("completedCount", 0)
-        total_topics = data.get("totalTopics", 112)
-
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        is_boards_only = 'Only 12th' in exam_target
+        is_both = '12th' in exam_target and 'Only' not in exam_target
 
         context = f"""
 Student's name: {user_name}
@@ -275,6 +272,9 @@ Exam target: {exam_target}
 Days left for exam: {days_left}
 Topics completed: {completed_count} out of {total_topics}
 Completion percentage: {round((completed_count/total_topics)*100) if total_topics > 0 else 0}%
+
+{"This student is preparing for BOARDS ONLY — focus on CBSE Class 12, NCERT, theory, and board exam strategy. Never bring up JEE." if is_boards_only else ""}
+{"This student is preparing for BOTH JEE and 12th Boards — help them balance both. Remind them boards percentage matters for JEE counselling." if is_both else ""}
 
 Use this data naturally in conversation when relevant.
 If they ask for a study plan, suggest what to study next based on completion.
